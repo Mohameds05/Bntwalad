@@ -3,34 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بنت ولد - Online Multiplayer</title>
+    <title>بنت ولد - Lobby</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --neon-blue: #00f3ff; --neon-pink: #ff007a; --bg: #050a10; }
-        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-y: auto; }
-        .card { background: rgba(16, 25, 39, 0.9); backdrop-filter: blur(15px); border: 2px solid var(--neon-blue); border-radius: 25px; padding: 25px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .letter-box { width: 70px; height: 70px; background: var(--neon-blue); color: black; border-radius: 15px; font-size: 2.5rem; font-weight: 900; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px var(--neon-blue); }
-        .timer { font-size: 1.5rem; color: var(--neon-pink); border: 2px solid var(--neon-pink); padding: 5px 15px; border-radius: 50px; }
-        .input-wrapper { display: grid; gap: 8px; }
-        .field { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; display: flex; align-items: center; padding: 2px 15px; }
-        .field label { width: 70px; color: var(--neon-blue); font-weight: bold; font-size: 0.9rem; }
-        input { background: transparent; border: none; color: white; width: 100%; padding: 10px; text-align: right; outline: none; font-size: 1.1rem; font-family: 'Cairo'; }
-        .btn { width: 100%; padding: 15px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
-        .btn-stop { background: var(--neon-pink); color: white; box-shadow: 0 0 15px var(--neon-pink); }
-        .btn-next { background: var(--neon-blue); color: black; display: none; }
-        #results { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #444; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: rgba(16, 25, 39, 0.9); backdrop-filter: blur(15px); border: 2px solid var(--neon-blue); border-radius: 25px; padding: 30px; width: 90%; max-width: 450px; text-align: center; }
+        
+        /* Menu Styles */
+        #menu-screen { display: block; }
+        .nickname-input { background: #111; border: 1px solid var(--neon-blue); color: white; padding: 15px; border-radius: 12px; width: 80%; margin-bottom: 20px; font-size: 1.1rem; text-align: center; outline: none; }
+        
+        /* Lobby Styles */
+        #lobby-screen { display: none; }
+        .player-list { background: rgba(0,0,0,0.4); border-radius: 15px; padding: 15px; margin: 20px 0; text-align: right; }
+        .player-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+        .status-ready { color: #2ecc71; font-weight: bold; }
+        .status-waiting { color: #aaa; }
+
+        /* Game UI */
+        #game-screen { display: none; }
+        .field { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 10px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; }
+        .field label { width: 60px; color: var(--neon-blue); font-weight: bold; }
+        input.ans { background: transparent; border: none; color: white; width: 100%; padding: 10px; text-align: right; outline: none; }
+        
+        .btn { width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-blue { background: var(--neon-blue); color: black; }
+        .btn-pink { background: var(--neon-pink); color: white; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div id="game-ui">
-        <div class="header">
-            <div class="letter-box" id="current-letter">?</div>
-            <div class="timer" id="timer">60</div>
+    <div id="menu-screen">
+        <h1 style="color: var(--neon-blue);">بنت ولد ONLINE</h1>
+        <input type="text" id="nick-input" class="nickname-input" placeholder="اكتب اسمك المستعار...">
+        <button class="btn btn-blue" onclick="joinGame()">دخول للغرفة</button>
+    </div>
+
+    <div id="lobby-screen">
+        <h2>الغرفة المباشرة 🛰️</h2>
+        <div class="player-list" id="player-list">
+            </div>
+        <p id="lobby-msg">في انتظار بقية اللاعبين (لازم 2 على الأقل)...</p>
+        <button class="btn btn-pink" id="ready-btn" onclick="sendReady()">أنا جاهز (Ready)</button>
+    </div>
+
+    <div id="game-screen">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div id="current-letter" style="font-size: 2.5rem; color: var(--neon-blue); font-weight: 900;">؟</div>
+            <div id="timer" style="font-size: 1.5rem; color: var(--neon-pink);">60</div>
         </div>
         <div class="input-wrapper">
             <div class="field"><label>بنت</label><input type="text" class="ans"></div>
@@ -39,70 +62,65 @@
             <div class="field"><label>نبات</label><input type="text" class="ans"></div>
             <div class="field"><label>جماد</label><input type="text" class="ans"></div>
             <div class="field"><label>بلاد</label><input type="text" class="ans"></div>
-            <div class="field"><label>مهنة</label><input type="text" class="ans"></div>
         </div>
-        <button class="btn btn-stop" id="stop-btn" onclick="emitStop()">STOP !</button>
-    </div>
-
-    <div id="results">
-        <h2 style="color: #2ecc71;">+ <span id="round-score">0</span> نقاط</h2>
-        <button class="btn btn-next" id="next-btn" onclick="requestNext()">الجولة التالية ➔</button>
-        <p style="font-size: 0.8rem; color: #777; margin-top: 10px;">في انتظار بقية اللاعبين...</p>
+        <button class="btn btn-pink" onclick="socket.emit('player_stopped')">STOP !</button>
     </div>
 </div>
 
 <script>
     const socket = io();
-    let timeLeft = 60;
-    let timerInterval;
-    let myLetter = '';
+    let myNick = "";
 
-    socket.on('init', (data) => {
-        myLetter = data.letter;
-        document.getElementById('current-letter').innerText = myLetter;
-        resetTimer();
-    });
-
-    socket.on('stop_game_forall', (data) => {
-        finishGameLocal();
-    });
-
-    socket.on('new_round_started', (data) => {
-        location.reload(); // أسهل طريقة لتصفير كل شيء وبدأ جولة جديدة
-    });
-
-    function resetTimer() {
-        clearInterval(timerInterval);
-        timeLeft = 60;
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            document.getElementById('timer').innerText = timeLeft;
-            if(timeLeft <= 0) emitStop();
-        }, 1000);
+    function joinGame() {
+        myNick = document.getElementById('nick-input').value;
+        if(myNick.trim() != "") {
+            socket.emit('join_game', myNick);
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'block';
+        }
     }
 
-    function emitStop() {
-        socket.emit('player_stopped', { sender: socket.id });
+    function sendReady() {
+        socket.emit('player_ready');
+        document.getElementById('ready-btn').disabled = true;
+        document.getElementById('ready-btn').innerText = "تمت الموافقة ✓";
+        document.getElementById('ready-btn').style.background = "#333";
     }
 
-    function finishGameLocal() {
-        clearInterval(timerInterval);
-        document.getElementById('stop-btn').style.display = 'none';
-        document.getElementById('results').style.display = 'block';
-        document.getElementById('next-btn').style.display = 'block';
-        
-        let score = 0;
-        document.querySelectorAll('.ans').forEach(input => {
-            if(input.value.trim().startsWith(myLetter)) score++;
-            input.disabled = true;
+    socket.on('update_players', (players) => {
+        const list = document.getElementById('player-list');
+        list.innerHTML = "";
+        Object.values(players).forEach(p => {
+            list.innerHTML += `
+                <div class="player-item">
+                    <span>${p.name}</span>
+                    <span class="${p.ready ? 'status-ready' : 'status-waiting'}">
+                        ${p.ready ? 'جاهز ✓' : 'ينتظر...'}
+                    </span>
+                </div>`;
         });
-        document.getElementById('round-score').innerText = score;
-        if(score >= 3) confetti();
-    }
+    });
 
-    function requestNext() {
-        socket.emit('request_next_round');
-    }
+    socket.on('start_countdown', () => {
+        let count = 3;
+        document.getElementById('lobby-msg').innerText = "ستبدأ اللعبة بعد " + count;
+        let itv = setInterval(() => {
+            count--;
+            if(count <= 0) {
+                clearInterval(itv);
+                document.getElementById('lobby-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'block';
+                // ابدأ التوقيت هنا...
+            } else {
+                document.getElementById('lobby-msg').innerText = "ستبدأ اللعبة بعد " + count;
+            }
+        }, 1000);
+    });
+
+    socket.on('stop_game_forall', () => {
+        alert("انتهت الجولة!");
+        document.querySelectorAll('.ans').forEach(i => i.disabled = true);
+    });
 </script>
 </body>
 </html>
