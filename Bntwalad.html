@@ -12,13 +12,11 @@
         * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         
-        /* Glassmorphism Card */
         .container { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 32px; width: 95%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); position: relative; }
         .hidden { display: none !important; }
 
         h1 { font-size: 2.2rem; font-weight: 900; text-align: center; margin-bottom: 10px; background: linear-gradient(to right, #818cf8, #f43f5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* Inputs & Buttons */
         input[type="text"] { width: 100%; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; color: white; font-family: inherit; font-size: 1rem; outline: none; margin-bottom: 15px; }
         input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2); }
         
@@ -26,7 +24,6 @@
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
 
-        /* Game UI */
         .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .letter-circle { width: 75px; height: 75px; background: linear-gradient(135deg, var(--primary), #4338ca); border-radius: 20px; display: flex; justify-content: center; align-items: center; font-size: 2.8rem; font-weight: 900; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); }
         
@@ -35,12 +32,10 @@
         .field-box label { display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
         .field-box input { background: transparent; border: none; padding: 0; margin: 0; font-size: 1.1rem; }
 
-        /* Picker */
         .alphabet-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
         .l-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px 0; border-radius: 8px; cursor: pointer; font-weight: 700; }
         .l-btn:hover { background: var(--primary); }
 
-        /* Chat */
         .chat-area { margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         #chat-box { height: 70px; overflow-y: auto; font-size: 0.85rem; color: #cbd5e1; }
     </style>
@@ -50,7 +45,7 @@
 <div class="container">
     <div id="sc-join">
         <h1>بنت ولد</h1>
-        <input type="text" id="nick" placeholder="أدخل اسمك المستعار...">
+        <input type="text" id="nick" placeholder="أدخل اسمك المستعار..." onkeypress="if(event.key === 'Enter') join()">
         <button class="btn btn-primary" onclick="join()">انضم الآن ➔</button>
     </div>
 
@@ -71,7 +66,7 @@
     <div id="sc-game" class="hidden">
         <div class="game-header">
             <div class="letter-circle" id="active-l">؟</div>
-            <div id="timer" style="font-size: 1.8rem; font-weight: 700;">60</div>
+            <div id="game-timer" style="font-size: 1.8rem; font-weight: 700; color: var(--danger)">60</div>
         </div>
         <div class="grid-inputs">
             <div class="field-box"><label>بنت</label><input type="text" class="ans"></div>
@@ -84,10 +79,10 @@
         <button class="btn btn-primary" style="background: var(--danger); margin-top: 20px;" onclick="stopRound()">S T O P !</button>
     </div>
 
-    <div class="chat-area">
+    <div class="chat-area" id="sc-chat" class="hidden">
         <div id="chat-box"></div>
         <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <input type="text" id="m-in" placeholder="نبر هنا..." style="margin:0; padding:8px;">
+            <input type="text" id="m-in" placeholder="نبر هنا..." style="margin:0; padding:8px;" onkeypress="if(event.key === 'Enter') sendMsg()">
             <button class="btn btn-primary" style="width: auto; padding: 0 15px;" onclick="sendMsg()">></button>
         </div>
     </div>
@@ -97,6 +92,8 @@
     const socket = io();
     let currentLetter = "";
     let amIPicker = false;
+    let gameInterval;
+    let pickerInterval;
 
     function join() {
         const n = document.getElementById('nick').value;
@@ -107,13 +104,14 @@
         socket.emit('player_ready');
         document.getElementById('ready-btn').disabled = true;
         document.getElementById('ready-btn').style.opacity = "0.5";
+        document.getElementById('ready-btn').innerText = "في انتظار البقية...";
     }
 
     socket.on('update_players', (ps) => {
         document.getElementById('p-list').innerHTML = Object.values(ps).map(p => `
-            <div style="display:flex; justify-content:space-between; padding:10px; background:rgba(255,255,255,0.05); border-radius:10px; margin-bottom:5px;">
+            <div style="display:flex; justify-content:space-between; padding:10px; background:rgba(255,255,255,0.05); border-radius:10px; margin-bottom:5px; border-left: 4px solid ${p.ready ? 'var(--success)' : 'gray'}">
                 <span>${p.name} ${p.ready ? '✅' : '⏳'}</span>
-                <span style="font-weight:700">${p.score} نقطة</span>
+                <span style="font-weight:700; color: var(--primary)">${p.score} نقطة</span>
             </div>
         `).join('');
     });
@@ -122,55 +120,106 @@
         show('sc-picker');
         let count = 5;
         const t = document.getElementById('p-timer');
+        t.innerText = count;
+
         if(socket.id === data.pickerId) {
             amIPicker = true;
-            document.getElementById('p-info').innerText = "دورك! اختر حرفاً";
+            document.getElementById('p-info').innerText = "دورك! اختر حرفاً بسرعة";
             document.getElementById('l-grid-container').classList.remove('hidden');
             const grid = document.getElementById('alphabet-grid');
+            // إظهار الحروف المتبقية فقط
             grid.innerHTML = data.remaining.split('').map(l => `<button class="l-btn" onclick="pick('${l}')">${l}</button>`).join('');
         } else {
-            document.getElementById('p-info').innerText = `ينتظرون ${data.pickerName}...`;
+            amIPicker = false;
+            document.getElementById('p-info').innerText = `ينتظرون ${data.pickerName} ليختار حرفاً...`;
             document.getElementById('l-grid-container').classList.add('hidden');
         }
-        let itv = setInterval(() => {
-            count--; t.innerText = count;
-            if(count <= 0) { clearInterval(itv); if(amIPicker) pick('أ'); }
+
+        clearInterval(pickerInterval);
+        pickerInterval = setInterval(() => {
+            count--; 
+            t.innerText = count;
+            if(count <= 0) { 
+                clearInterval(pickerInterval); 
+                if(amIPicker && data.remaining.length > 0) {
+                    pick(data.remaining[0]); // اختيار أول حرف متاح آلياً
+                }
+            }
         }, 1000);
     });
 
-    function pick(l) { if(amIPicker) { socket.emit('letter_chosen', l); amIPicker = false; } }
+    function pick(l) { 
+        if(amIPicker) { 
+            clearInterval(pickerInterval);
+            socket.emit('letter_chosen', l); 
+            amIPicker = false; 
+        } 
+    }
 
     socket.on('start_game', (l) => {
         currentLetter = l;
         document.getElementById('active-l').innerText = l;
         show('sc-game');
-        document.querySelectorAll('.ans').forEach(i => { i.value = ""; i.disabled = false; });
+        
+        // تنظيف الخانات للعب
+        document.querySelectorAll('.ans').forEach(i => { i.value = ""; });
+        
+        // تشغيل عداد 60 ثانية
+        let timeLeft = 60;
+        document.getElementById('game-timer').innerText = timeLeft;
+        clearInterval(gameInterval);
+        gameInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('game-timer').innerText = timeLeft;
+            if(timeLeft <= 0) {
+                clearInterval(gameInterval);
+                stopRound(); // إيقاف آلي عند انتهاء الوقت
+            }
+        }, 1000);
     });
 
     function stopRound() {
-        let sc = 0;
-        document.querySelectorAll('.ans').forEach(i => {
-            if(i.value.trim().startsWith(currentLetter) && i.value.length > 1) sc++;
-        });
-        socket.emit('submit_round', { roundScore: sc });
+        clearInterval(gameInterval);
+        socket.emit('stop_round_btn'); // إعلام السيرفر بإيقاف الجولة
     }
 
-    socket.on('round_ended', (data) => {
+    // السيرفر يطلب من الجميع حساب نقاطهم
+    socket.on('trigger_score_calc', (stopperName) => {
+        clearInterval(gameInterval);
+        let sc = 0;
+        
+        document.querySelectorAll('.ans').forEach(i => {
+            let val = i.value.trim();
+            // الكلمة لازم تبدا بالحرف المطلوب وموش حرف واحد
+            if(val.startsWith(currentLetter) && val.length > 1) {
+                sc += 10; // 10 نقاط على كل كلمة صحيحة
+            }
+        });
+
+        socket.emit('send_my_score', sc);
+
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        alert("انتهت الجولة! الموقف: " + data.stopper);
+        alert(`انتهت الجولة!\nالموقف: ${stopperName}\nنقاطك في هذه الجولة: ${sc}`);
+        
         show('sc-lobby');
         document.getElementById('ready-btn').disabled = false;
         document.getElementById('ready-btn').style.opacity = "1";
+        document.getElementById('ready-btn').innerText = "أنا جاهز (Ready)";
+    });
+
+    socket.on('game_over', (data) => {
+        alert("انتهت اللعبة!\nالسبب: " + data.reason);
+        location.reload(); // إعادة تحميل الصفحة لبدء لعبة جديدة بالكامل
     });
 
     function sendMsg() {
         const i = document.getElementById('m-in');
-        if(i.value) { socket.emit('send_msg', i.value); i.value = ""; }
+        if(i.value.trim()) { socket.emit('send_msg', i.value); i.value = ""; }
     }
 
     socket.on('msg', (d) => {
         const b = document.getElementById('chat-box');
-        b.innerHTML += `<div><b>${d.name}:</b> ${d.txt}</div>`;
+        b.innerHTML += `<div style="margin-bottom: 4px;"><b>${d.name}:</b> ${d.txt}</div>`;
         b.scrollTop = b.scrollHeight;
     });
 
