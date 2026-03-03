@@ -2,69 +2,82 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const path = require('path');
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
 
 let players = {};
-let pickingHistory = []; // قيد اللاعبين اللي اختاروا
+let usedLetters = [];
+let pickingHistory = [];
+const alphabet = "أبتثجحخدذرزسشصضطظعغفقكلمنهوي";
 
 io.on('connection', (socket) => {
-  
-  socket.on('join_game', (nickname) => {
-    players[socket.id] = { id: socket.id, name: nickname, ready: false, score: 0 };
-    io.emit('update_players', players);
-  });
+    
+    socket.on('join_game', (nickname) => {
+        players[socket.id] = { id: socket.id, name: nickname, ready: false, score: 0 };
+        io.emit('update_players', players);
+    });
 
-  socket.on('player_ready', () => {
-    if (players[socket.id]) {
-      players[socket.id].ready = true;
-      io.emit('update_players', players);
-      
-      const allReady = Object.values(players).every(p => p.ready);
-      const playerKeys = Object.keys(players);
+    socket.on('player_ready', () => {
+        if (players[socket.id]) {
+            players[socket.id].ready = true;
+            io.emit('update_players', players);
+            
+            const allReady = Object.values(players).every(p => p.ready);
+            if (allReady && Object.keys(players).length >= 2) {
+                startNewRound();
+            }
+        }
+    });
 
-      if (allReady && playerKeys.length >= 2) {
-        selectNextPicker();
-      }
+    function startNewRound() {
+        if (usedLetters.length >= alphabet.length) {
+            return io.emit('game_over', { winner: getWinner() });
+        }
+
+        const playerIds = Object.keys(players);
+        let availablePickers = playerIds.filter(id => !pickingHistory.includes(id));
+        
+        if (availablePickers.length === 0) {
+            pickingHistory = [];
+            availablePickers = playerIds;
+        }
+
+        const pickerId = availablePickers[Math.floor(Math.random() * availablePickers.length)];
+        pickingHistory.push(pickerId);
+
+        const remaining = alphabet.split('').filter(l => !usedLetters.includes(l)).join('');
+        io.emit('picker_selected', { 
+            pickerId, 
+            pickerName: players[pickerId].name,
+            remaining 
+        });
     }
-  });
 
-  function selectNextPicker() {
-    const playerKeys = Object.keys(players);
-    let availablePickers = playerKeys.filter(id => !pickingHistory.includes(id));
+    socket.on('letter_chosen', (letter) => {
+        usedLetters.push(letter);
+        io.emit('start_game', letter);
+    });
 
-    if (availablePickers.length === 0) {
-      pickingHistory = [];
-      availablePickers = playerKeys;
-    }
+    socket.on('submit_round', (data) => {
+        if (players[socket.id]) {
+            players[socket.id].score += data.roundScore;
+            io.emit('round_ended', { 
+                stopper: players[socket.id].name, 
+                players 
+            });
+        }
+    });
 
-    const pickerId = availablePickers[Math.floor(Math.random() * availablePickers.length)];
-    pickingHistory.push(pickerId);
-    io.emit('picker_selected', { pickerName: players[pickerId].name, pickerId: pickerId });
-  }
+    socket.on('send_msg', (txt) => {
+        io.emit('msg', { name: players[socket.id]?.name || "لاعب", txt });
+    });
 
-  socket.on('letter_chosen', (letter) => {
-    io.emit('start_game_with_letter', letter);
-  });
-
-  socket.on('send_msg', (data) => {
-    io.emit('receive_msg', { name: players[socket.id]?.name || "لاعب", text: data.text });
-  });
-
-  socket.on('player_stopped', (results) => {
-    // تحديث السكور
-    if(players[socket.id]) players[socket.id].score += results.score;
-    io.emit('stop_game_forall', { winner: players[socket.id].name, players: players });
-  });
-
-  socket.on('disconnect', () => {
-    delete players[socket.id];
-    pickingHistory = pickingHistory.filter(id => id !== socket.id);
-    io.emit('update_players', players);
-  });
+    socket.on('disconnect', () => {
+        delete players[socket.id];
+        io.emit('update_players', players);
+    });
 });
 
-http.listen(3000, () => { console.log('Server Active on Port 3000'); });
+function getWinner() {
+    return Object.values(players).reduce((prev, current) => (prev.score > current.score) ? prev : current);
+}
+
+http.listen(3000, () => console.log('Server running!'));
