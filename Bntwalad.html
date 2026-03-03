@@ -3,294 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بنت ولد - النسخة الاحترافية</title>
+    <title>بنت ولد - Pro Version</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #6366f1; /* Indigo عصري */
-            --primary-light: #818cf8;
-            --success: #10b981;
-            --danger: #f43f5e;
-            --bg-dark: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --border: rgba(255, 255, 255, 0.1);
-        }
-
-        * { box-sizing: border-box; transition: all 0.2s ease-in-out; }
-
-        body {
-            margin: 0;
-            font-family: 'Cairo', sans-serif;
-            background: var(--bg-dark);
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(244, 63, 94, 0.1) 0%, transparent 40%);
-            color: #f8fafc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        .container {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 32px;
-            width: 95%;
-            max-width: 480px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            position: relative;
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
+        :root { --primary: #6366f1; --danger: #f43f5e; --success: #10b981; --bg: #0f172a; }
+        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        
+        /* Glassmorphism Card */
+        .container { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 32px; width: 95%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); position: relative; }
         .hidden { display: none !important; }
 
-        /* Typography */
-        h1 { font-size: 2rem; font-weight: 900; margin-bottom: 8px; text-align: center; background: linear-gradient(to right, #818cf8, #f43f5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        p.subtitle { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 0.95rem; }
-
+        h1 { font-size: 2.2rem; font-weight: 900; text-align: center; margin-bottom: 10px; background: linear-gradient(to right, #818cf8, #f43f5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
         /* Inputs & Buttons */
-        .input-wrapper { position: relative; margin-bottom: 16px; }
-        input[type="text"] {
-            width: 100%;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 16px;
-            color: white;
-            font-family: inherit;
-            font-size: 1rem;
-            outline: none;
-        }
+        input[type="text"] { width: 100%; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; color: white; font-family: inherit; font-size: 1rem; outline: none; margin-bottom: 15px; }
         input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2); }
+        
+        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 1rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
 
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 12px;
-            border: none;
-            font-family: inherit;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5); }
-        .btn-primary:active { transform: translateY(0); }
+        /* Game UI */
+        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .letter-circle { width: 75px; height: 75px; background: linear-gradient(135deg, var(--primary), #4338ca); border-radius: 20px; display: flex; justify-content: center; align-items: center; font-size: 2.8rem; font-weight: 900; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); }
+        
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .field-box { background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; }
+        .field-box label { display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+        .field-box input { background: transparent; border: none; padding: 0; margin: 0; font-size: 1.1rem; }
 
-        /* Player List */
-        .player-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 8px; }
-        .ready { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .waiting { background: #64748b; }
+        /* Picker */
+        .alphabet-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
+        .l-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px 0; border-radius: 8px; cursor: pointer; font-weight: 700; }
+        .l-btn:hover { background: var(--primary); }
 
-        /* Game UI Specifics */
-        .header-game { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .letter-display {
-            width: 70px; height: 70px;
-            background: linear-gradient(135deg, var(--primary), #4338ca);
-            border-radius: 16px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 2.5rem; font-weight: 900;
-            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
-        }
-        .timer-display { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .game-input-group { background: rgba(15, 23, 42, 0.4); border-radius: 12px; padding: 8px 12px; border: 1px solid var(--border); }
-        .game-input-group label { display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
-        .game-input-group input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 1rem; padding: 0; }
-
-        /* Picker Grid */
-        .letter-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 16px; }
-        .letter-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            color: white;
-            padding: 8px 0;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 700;
-        }
-        .letter-btn:hover { background: var(--primary); border-color: var(--primary); }
-
-        /* Chat UI */
-        .chat-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
-        .chat-messages { height: 80px; overflow-y: auto; font-size: 0.85rem; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
-        .chat-bubble { padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,0.05); width: fit-content; }
+        /* Chat */
+        .chat-area { margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        #chat-box { height: 70px; overflow-y: auto; font-size: 0.85rem; color: #cbd5e1; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="screen-join">
+    <div id="sc-join">
         <h1>بنت ولد</h1>
-        <p class="subtitle">تحدى أصدقاءك في الوقت الحقيقي</p>
-        <div class="input-wrapper">
-            <input type="text" id="nick" placeholder="أدخل اسمك المستعار..." maxlength="12">
-        </div>
-        <button class="btn btn-primary" onclick="join()">ابدأ الآن</button>
+        <input type="text" id="nick" placeholder="أدخل اسمك المستعار...">
+        <button class="btn btn-primary" onclick="join()">انضم الآن ➔</button>
     </div>
 
-    <div id="screen-lobby" class="hidden">
-        <h2>غرفة الانتظار</h2>
-        <p class="subtitle">بانتظار تأكيد جاهزية الجميع</p>
-        <div id="player-list" style="margin-bottom: 24px;"></div>
-        <button id="ready-btn" class="btn btn-primary" onclick="ready()">أنا جاهز</button>
+    <div id="sc-lobby" class="hidden">
+        <h2 style="text-align:center">غرفة الانتظار</h2>
+        <div id="p-list" style="margin: 20px 0"></div>
+        <button id="ready-btn" class="btn btn-primary" onclick="ready()">أنا جاهز (Ready)</button>
     </div>
 
-    <div id="screen-picker" class="hidden">
-        <h2 id="picker-info">اختيار الحرف</h2>
-        <div style="text-align:center; font-size: 3.5rem; font-weight: 900; color: var(--danger);" id="p-timer">5</div>
-        <div id="letters-options" class="hidden">
-            <p class="subtitle">اختر حرف الجولة بسرعة!</p>
-            <div class="letter-grid">
-                <script>
-                    "أبتثجحخدذرزسشصضطظعغفقكلمنهوي".split('').forEach(l => {
-                        document.write(`<button class="letter-btn" onclick="chooseLetter('${l}')">${l}</button>`);
-                    });
-                </script>
-            </div>
+    <div id="sc-picker" class="hidden">
+        <h2 id="p-info" style="text-align:center">اختيار الحرف</h2>
+        <div id="p-timer" style="font-size: 3.5rem; font-weight: 900; text-align:center; color: var(--danger)">5</div>
+        <div id="l-grid-container" class="hidden">
+            <div class="alphabet-grid" id="alphabet-grid"></div>
         </div>
     </div>
 
-    <div id="screen-game" class="hidden">
-        <div class="header-game">
-            <div class="letter-display" id="active-l">؟</div>
-            <div class="timer-display" id="game-timer">60</div>
+    <div id="sc-game" class="hidden">
+        <div class="game-header">
+            <div class="letter-circle" id="active-l">؟</div>
+            <div id="timer" style="font-size: 1.8rem; font-weight: 700;">60</div>
         </div>
-        <div class="game-grid">
-            <div class="game-input-group"><label>بنت</label><input type="text" class="ans"></div>
-            <div class="game-input-group"><label>ولد</label><input type="text" class="ans"></div>
-            <div class="game-input-group"><label>حيوان</label><input type="text" class="ans"></div>
-            <div class="game-input-group"><label>نبات</label><input type="text" class="ans"></div>
-            <div class="game-input-group"><label>جماد</label><input type="text" class="ans"></div>
-            <div class="game-input-group"><label>بلاد</label><input type="text" class="ans"></div>
+        <div class="grid-inputs">
+            <div class="field-box"><label>بنت</label><input type="text" class="ans"></div>
+            <div class="field-box"><label>ولد</label><input type="text" class="ans"></div>
+            <div class="field-box"><label>حيوان</label><input type="text" class="ans"></div>
+            <div class="field-box"><label>نبات</label><input type="text" class="ans"></div>
+            <div class="field-box"><label>جماد</label><input type="text" class="ans"></div>
+            <div class="field-box"><label>بلاد</label><input type="text" class="ans"></div>
         </div>
-        <button class="btn btn-primary" style="background: var(--danger);" onclick="stopGame()">S T O P !</button>
+        <button class="btn btn-primary" style="background: var(--danger); margin-top: 20px;" onclick="stopRound()">S T O P !</button>
     </div>
 
-    <div class="chat-section" id="chat-ui">
-        <div class="chat-messages" id="chat-msgs"></div>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="chat-in" placeholder="نبر هنا..." style="padding: 8px; font-size: 0.8rem;">
-            <button class="btn btn-primary" style="width: auto; padding: 0 16px;" onclick="sendMsg()">></button>
+    <div class="chat-area">
+        <div id="chat-box"></div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <input type="text" id="m-in" placeholder="نبر هنا..." style="margin:0; padding:8px;">
+            <button class="btn btn-primary" style="width: auto; padding: 0 15px;" onclick="sendMsg()">></button>
         </div>
     </div>
 </div>
 
 <script>
-    // [نفس كود الـ JavaScript السابق مع تحسينات بسيطة للـ UI]
     const socket = io();
-    let currentL = "";
+    let currentLetter = "";
     let amIPicker = false;
 
     function join() {
         const n = document.getElementById('nick').value;
-        if(n.trim()) { socket.emit('join_game', n); show('screen-lobby'); }
+        if(n.trim()) { socket.emit('join_game', n); show('sc-lobby'); }
     }
 
     function ready() {
         socket.emit('player_ready');
-        const btn = document.getElementById('ready-btn');
-        btn.innerText = "في انتظار البقية...";
-        btn.style.opacity = "0.6";
-        btn.disabled = true;
+        document.getElementById('ready-btn').disabled = true;
+        document.getElementById('ready-btn').style.opacity = "0.5";
     }
 
-    socket.on('update_players', (players) => {
-        const list = document.getElementById('player-list');
-        list.innerHTML = Object.values(players).map(p => `
-            <div class="player-card">
-                <span><span class="status-dot ${p.ready?'ready':'waiting'}"></span>${p.name}</span>
-                <span style="font-weight:700; color:var(--primary-light)">${p.score} نقطة</span>
+    socket.on('update_players', (ps) => {
+        document.getElementById('p-list').innerHTML = Object.values(ps).map(p => `
+            <div style="display:flex; justify-content:space-between; padding:10px; background:rgba(255,255,255,0.05); border-radius:10px; margin-bottom:5px;">
+                <span>${p.name} ${p.ready ? '✅' : '⏳'}</span>
+                <span style="font-weight:700">${p.score} نقطة</span>
             </div>
         `).join('');
     });
 
     socket.on('picker_selected', (data) => {
-        show('screen-picker');
+        show('sc-picker');
         let count = 5;
-        const timerTxt = document.getElementById('p-timer');
+        const t = document.getElementById('p-timer');
         if(socket.id === data.pickerId) {
-            document.getElementById('picker-info').innerText = "دورك للاختيار!";
-            document.getElementById('letters-options').classList.remove('hidden');
             amIPicker = true;
+            document.getElementById('p-info').innerText = "دورك! اختر حرفاً";
+            document.getElementById('l-grid-container').classList.remove('hidden');
+            const grid = document.getElementById('alphabet-grid');
+            grid.innerHTML = data.remaining.split('').map(l => `<button class="l-btn" onclick="pick('${l}')">${l}</button>`).join('');
         } else {
-            document.getElementById('picker-info').innerText = `المختار: ${data.pickerName}`;
-            document.getElementById('letters-options').classList.add('hidden');
+            document.getElementById('p-info').innerText = `ينتظرون ${data.pickerName}...`;
+            document.getElementById('l-grid-container').classList.add('hidden');
         }
-        let cd = setInterval(() => {
-            count--; timerTxt.innerText = count;
-            if(count <= 0) { clearInterval(cd); if(amIPicker) chooseLetter('أ'); }
-        }, 1000);
-    });
-
-    function chooseLetter(l) { if(amIPicker) { socket.emit('letter_chosen', l); amIPicker = false; } }
-
-    socket.on('start_game_with_letter', (l) => {
-        currentL = l;
-        document.getElementById('active-l').innerText = l;
-        show('screen-game');
-        let timeLeft = 60;
         let itv = setInterval(() => {
-            timeLeft--;
-            document.getElementById('game-timer').innerText = timeLeft;
-            if(timeLeft <= 10) document.getElementById('game-timer').style.color = "var(--danger)";
-            if(timeLeft <= 0) { clearInterval(itv); stopGame(); }
+            count--; t.innerText = count;
+            if(count <= 0) { clearInterval(itv); if(amIPicker) pick('أ'); }
         }, 1000);
     });
 
-    function stopGame() {
-        let score = 0;
+    function pick(l) { if(amIPicker) { socket.emit('letter_chosen', l); amIPicker = false; } }
+
+    socket.on('start_game', (l) => {
+        currentLetter = l;
+        document.getElementById('active-l').innerText = l;
+        show('sc-game');
+        document.querySelectorAll('.ans').forEach(i => { i.value = ""; i.disabled = false; });
+    });
+
+    function stopRound() {
+        let sc = 0;
         document.querySelectorAll('.ans').forEach(i => {
-            if(i.value.trim().toLowerCase().startsWith(currentL.toLowerCase()) && i.value.length > 1) score++;
+            if(i.value.trim().startsWith(currentLetter) && i.value.length > 1) sc++;
         });
-        socket.emit('player_stopped', { score: score });
+        socket.emit('submit_round', { roundScore: sc });
     }
 
-    socket.on('stop_game_forall', (data) => {
+    socket.on('round_ended', (data) => {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        alert("انتهت الجولة! الموقف: " + data.winner);
-        location.reload();
+        alert("انتهت الجولة! الموقف: " + data.stopper);
+        show('sc-lobby');
+        document.getElementById('ready-btn').disabled = false;
+        document.getElementById('ready-btn').style.opacity = "1";
     });
 
     function sendMsg() {
-        const i = document.getElementById('chat-in');
-        if(i.value) { socket.emit('send_msg', { text: i.value }); i.value = ""; }
+        const i = document.getElementById('m-in');
+        if(i.value) { socket.emit('send_msg', i.value); i.value = ""; }
     }
 
-    socket.on('receive_msg', (data) => {
-        const box = document.getElementById('chat-msgs');
-        box.innerHTML += `<div class="chat-bubble"><b>${data.name}:</b> ${data.text}</div>`;
-        box.scrollTop = box.scrollHeight;
+    socket.on('msg', (d) => {
+        const b = document.getElementById('chat-box');
+        b.innerHTML += `<div><b>${d.name}:</b> ${d.txt}</div>`;
+        b.scrollTop = b.scrollHeight;
     });
 
     function show(id) {
-        ['screen-join', 'screen-lobby', 'screen-picker', 'screen-game'].forEach(s => document.getElementById(s).classList.add('hidden'));
+        ['sc-join', 'sc-lobby', 'sc-picker', 'sc-game'].forEach(s => document.getElementById(s).classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
     }
 </script>
