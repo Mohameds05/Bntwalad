@@ -2,6 +2,11 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
+const path = require('path');
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 let players = {};
 let usedLetters = [];
@@ -10,26 +15,31 @@ const alphabet = "أبتثجحخدذرزسشصضطظعغفقكلمنهوي";
 
 io.on('connection', (socket) => {
     
+    // دخول لاعب جديد
     socket.on('join_game', (nickname) => {
         players[socket.id] = { id: socket.id, name: nickname, ready: false, score: 0 };
         io.emit('update_players', players);
     });
 
+    // لاعب يعلن جاهزيته
     socket.on('player_ready', () => {
         if (players[socket.id]) {
             players[socket.id].ready = true;
             io.emit('update_players', players);
             
             const allReady = Object.values(players).every(p => p.ready);
-            if (allReady && Object.keys(players).length >= 2) {
+            const playerCount = Object.keys(players).length;
+            
+            if (allReady && playerCount >= 2) {
                 startNewRound();
             }
         }
     });
 
+    // بداية جولة جديدة واختيار من سيختار الحرف
     function startNewRound() {
         if (usedLetters.length >= alphabet.length) {
-            return io.emit('game_over', { winner: getWinner() });
+            return io.emit('game_over', { reason: "انتهت جميع الحروف!" });
         }
 
         const playerIds = Object.keys(players);
@@ -51,33 +61,43 @@ io.on('connection', (socket) => {
         });
     }
 
+    // استقبال الحرف وبدء اللعب
     socket.on('letter_chosen', (letter) => {
         usedLetters.push(letter);
         io.emit('start_game', letter);
     });
 
-    socket.on('submit_round', (data) => {
+    // لاعب ضغط على STOP
+    socket.on('stop_round_btn', () => {
         if (players[socket.id]) {
-            players[socket.id].score += data.roundScore;
-            io.emit('round_ended', { 
-                stopper: players[socket.id].name, 
-                players 
-            });
+            // نطلب من كل اللاعبين يحسبوا سكوراتهم
+            io.emit('trigger_score_calc', players[socket.id].name);
+            
+            // نرجعو الناس الكل "غير جاهزين" استعداداً للجولة القادمة
+            for(let id in players) {
+                players[id].ready = false;
+            }
         }
     });
 
+    // استقبال السكور من كل لاعب وتحديث القائمة
+    socket.on('send_my_score', (score) => {
+        if (players[socket.id]) {
+            players[socket.id].score += score;
+            io.emit('update_players', players);
+        }
+    });
+
+    // الدردشة
     socket.on('send_msg', (txt) => {
         io.emit('msg', { name: players[socket.id]?.name || "لاعب", txt });
     });
 
+    // خروج لاعب
     socket.on('disconnect', () => {
         delete players[socket.id];
         io.emit('update_players', players);
     });
 });
 
-function getWinner() {
-    return Object.values(players).reduce((prev, current) => (prev.score > current.score) ? prev : current);
-}
-
-http.listen(3000, () => console.log('Server running!'));
+http.listen(3000, () => console.log('Server is running on port 3000'));
